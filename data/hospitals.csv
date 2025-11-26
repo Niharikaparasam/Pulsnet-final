@@ -1,0 +1,7 @@
+hospital_id,hospital_name,lat,lon,address
+H001,"Fortis Hospital, Bannerghatta Road",12.9063,77.6016,"Bannerghatta Rd, Bengaluru"
+H002,"Manipal Hospital, Old Airport Road",12.9604,77.6485,"Old Airport Rd, Bengaluru"
+H003,"Columbia Asia Hospital, Hebbal",13.0352,77.597,"Hebbal, Bengaluru"
+H004,"Apollo Hospital, Jayanagar",12.925,77.5938,"Jayanagar, Bengaluru"
+H005,"Narayana Health City, Bommasandra",12.798,77.691,"Bommasandra, Bengaluru"
+H006,"Sakra World Hospital, Bellandur",12.9352,77.6964,"Bellandur, Bengaluru"
