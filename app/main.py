@@ -23,6 +23,7 @@ from fastapi import APIRouter, Depends
 
 from app.google_maps import distance_matrix
 from app.auth import router as auth_router, get_current_user  # 🔒 add get_current_user
+from app.alerts import trigger_match_alert
 
 app = FastAPI(title="PulseNet - Blood Matching Backend (CSV-based)")
 
@@ -122,11 +123,20 @@ def hospitals_cols():
 @app.post("/api/match")
 def match_handler(
     req: MatchRequest,
-    current_user = Depends(get_current_user)   # 🔒
+    current_user = Depends(get_current_user)  # keep protection
 ):
     reqd = req.dict()
     ranked = rank_donors_for_request(reqd, top_n=req.top_n)
-    return {"status": "ok", "matches": ranked}
+
+    # 🔔 ask alert system if this needs an alert
+    alert = trigger_match_alert(reqd, ranked)
+
+    return {
+        "status": "ok",
+        "matches": ranked,
+        "alert": alert,  # can be None or alert dict
+    }
+
 
 
 # ---------- Model upload (optional) ----------
