@@ -1,9 +1,19 @@
 # app/store.py
 import pandas as pd
 from pathlib import Path
-from app.config import DONORS_CSV, REQUESTS_CSV, HOSPITALS_CSV, UPLOADED_DONORS, UPLOADED_REQUESTS, UPLOADED_HOSPITALS
+from app.config import (
+    DONORS_CSV,
+    REQUESTS_CSV,
+    HOSPITALS_CSV,
+    UPLOADED_DONORS,
+    UPLOADED_REQUESTS,
+    UPLOADED_HOSPITALS,
+    DB_PATH,           # 🔹 add this
+)
 from typing import Dict, Any, List
 import shutil
+import sqlite3          # 🔹 add this
+
 
 # In-memory cached DataFrames
 _donors = None
@@ -22,15 +32,71 @@ def _copy_uploaded_if_exists():
     except Exception:
         pass
 
+def _load_user_donors_from_db() -> pd.DataFrame:
+    """
+    Load user-registered donors from users.db (user_donors table)
+    and map to same columns as donors.csv:
+    donor_id, name, blood_group, phone, lat, lon, availability, last_donation_date
+    """
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        conn.row_factory = sqlite3.Row
+        cur = conn.cursor()
+        cur.execute("SELECT * FROM user_donors")
+        rows = cur.fetchall()
+        conn.close()
+        if not rows:
+            return pd.DataFrame()
+
+        records = []
+        for r in rows:
+            records.append(
+                {
+                    "donor_id": r["donor_id"],
+                    "name": r["full_name"],
+                    "blood_group": r["blood_group"],
+                    "phone": r["phone"],
+                    "lat": r["lat"],
+                    "lon": r["lon"],
+                    "availability": r["availability"],
+                    "last_donation_date": r["last_donation_date"],
+                }
+            )
+        return pd.DataFrame(records)
+    except Exception:
+        return pd.DataFrame()
+
+
 def load_donors(force: bool = False) -> pd.DataFrame:
     global _donors
     _copy_uploaded_if_exists()
+
     if _donors is None or force:
+        # base donors from CSV
         if DONORS_CSV.exists():
-            _donors = pd.read_csv(DONORS_CSV)
+            base_df = pd.read_csv(DONORS_CSV)
         else:
-            _donors = pd.DataFrame()
+            base_df = pd.DataFrame()
+
+        # additional donors from user_donors table
+        user_df = _load_user_donors_from_db()
+
+        if not user_df.empty:
+            if base_df.empty:
+                _donors = user_df
+            else:
+                # ensure user_df has all columns in base_df
+                missing_cols = [c for c in base_df.columns if c not in user_df.columns]
+                for c in missing_cols:
+                    user_df[c] = None
+                _donors = pd.concat(
+                    [base_df, user_df[base_df.columns]], ignore_index=True
+                )
+        else:
+            _donors = base_df
+
     return _donors
+
 
 def load_requests(force: bool = False) -> pd.DataFrame:
     global _requests

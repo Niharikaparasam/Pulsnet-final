@@ -20,12 +20,15 @@ import joblib
 from app.config import MATCH_MODEL_PATH
 import os
 from fastapi import APIRouter, Depends
+from app.google_maps import distance_matrix, geocode_address  # 🔹 include geocode_address
 
-from app.google_maps import distance_matrix
-from app.auth import router as auth_router, get_current_user  # 🔒 add get_current_user
+from app.auth import router as auth_router, get_current_user,  require_hospital # 🔒 add get_current_user
+from app.donations import router as donations_router
 from app.alerts import trigger_match_alert
 
 app = FastAPI(title="PulseNet - Blood Matching Backend (CSV-based)")
+
+app.include_router(donations_router)
 
 # ---------- CORS (for React frontend) ----------
 app.add_middleware(
@@ -43,11 +46,13 @@ app.include_router(auth_router)
 class MatchRequest(BaseModel):
     required_blood_group: str
     hospital_id: Optional[str] = None
+    address: Optional[str] = None  # 🔹 NEW: user can type location name
     lat: Optional[float] = None
     lon: Optional[float] = None
     units_needed: Optional[int] = 1
     urgency_level: Optional[str] = None
     top_n: Optional[int] = 10
+
 
 # ---------- Health ----------
 @app.get("/api/health")
@@ -58,7 +63,7 @@ def health():
 @app.post("/api/upload/donors")
 async def upload_donors(
     file: UploadFile = File(...),
-    current_user = Depends(get_current_user)   # 🔒 require login
+    current_user = Depends(require_hospital),  # 🔒 require login
 ):
     content = await file.read()
     target = Path(DONORS_CSV)
@@ -70,7 +75,7 @@ async def upload_donors(
 @app.post("/api/upload/requests")
 async def upload_requests(
     file: UploadFile = File(...),
-    current_user = Depends(get_current_user)   # 🔒
+    current_user = Depends(require_hospital),  # 🔒
 ):
     content = await file.read()
     target = Path(REQUESTS_CSV)
@@ -82,7 +87,7 @@ async def upload_requests(
 @app.post("/api/upload/hospitals")
 async def upload_hospitals(
     file: UploadFile = File(...),
-    current_user = Depends(get_current_user)   # 🔒
+    current_user = Depends(require_hospital),  # 🔒
 ):
     content = await file.read()
     target = Path(HOSPITALS_CSV)
@@ -123,13 +128,39 @@ def hospitals_cols():
 @app.post("/api/match")
 def match_handler(
     req: MatchRequest,
-    current_user = Depends(get_current_user)  # keep protection
+    current_user = Depends(get_current_user)
 ):
     reqd = req.dict()
-    ranked = rank_donors_for_request(reqd, top_n=req.top_n)
 
-    # 🔔 ask alert system if this needs an alert
+    # 🔹 1) If lat/lon missing but address is given -> geocode it
+    if (reqd.get("lat") is None or reqd.get("lon") is None) and reqd.get("address"):
+        coords = geocode_address(reqd["address"])
+        if coords is None:
+            # Could not convert address to coordinates
+            raise HTTPException(
+                status_code=400,
+                detail=f"Could not geocode address: {reqd['address']}",
+            )
+        reqd["lat"], reqd["lon"] = coords  # (lat, lon)
+
+    # 🔹 2) If still no lat/lon and no hospital_id -> error
+    if reqd.get("lat") is None or reqd.get("lon") is None:
+        # You could also fallback to hospital_id logic (already in rank_donors_for_request)
+        # but here we explicitly enforce some location.
+        raise HTTPException(
+            status_code=400,
+            detail="You must provide either lat/lon or a valid address or hospital_id.",
+        )
+
+    ranked = rank_donors_for_request(reqd, top_n=req.top_n)
     alert = trigger_match_alert(reqd, ranked)
+
+    return {
+        "status": "ok",
+        "matches": ranked,
+        "alert": alert,
+    }
+
 
     return {
         "status": "ok",

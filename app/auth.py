@@ -7,7 +7,7 @@ from jose import JWTError, jwt
 from passlib.context import CryptContext
 import sqlite3
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Literal
 from app.config import DB_PATH, SECRET_KEY, ALGORITHM, ACCESS_TOKEN_EXPIRE_MINUTES
 
 # Password hashing
@@ -19,16 +19,19 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
 # ---------- Pydantic Models ----------
+
+
 class UserSignup(BaseModel):
     email: EmailStr
     password: str
     full_name: str
     phone: Optional[str] = None
     blood_group: Optional[str] = None
-
+    role: str = "user" 
+    
 class Token(BaseModel):
     access_token: str
-    token_type: str
+    token_type: str    
 
 class UserResponse(BaseModel):
     id: int
@@ -37,26 +40,28 @@ class UserResponse(BaseModel):
     phone: Optional[str]
     blood_group: Optional[str]
     created_at: str
+    role: str                                     # 👈 new
+
 
 # ---------- Database Setup ----------
 def init_db():
     DB_PATH.parent.mkdir(exist_ok=True)
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
-    cursor.execute(
-        """
-        CREATE TABLE IF NOT EXISTS users (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            email TEXT UNIQUE NOT NULL,
-            hashed_password TEXT NOT NULL,
-            full_name TEXT NOT NULL,
-            phone TEXT,
-            blood_group TEXT,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            is_active BOOLEAN DEFAULT 1
-        )
-        """
-    )
+    cursor.execute("""
+      CREATE TABLE IF NOT EXISTS users (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        email TEXT UNIQUE NOT NULL,
+        hashed_password TEXT NOT NULL,
+        full_name TEXT NOT NULL,
+        phone TEXT,
+        blood_group TEXT,
+        role TEXT NOT NULL DEFAULT 'user',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        is_active BOOLEAN DEFAULT 1
+       )
+    """)
+
     conn.commit()
     conn.close()
 
@@ -124,19 +129,18 @@ async def signup(user: UserSignup):
     hashed_password = get_password_hash(user.password)
 
     try:
-        cursor.execute(
-            """
-            INSERT INTO users (email, hashed_password, full_name, phone, blood_group)
-            VALUES (?, ?, ?, ?, ?)
-            """,
-            (
-                user.email,
-                hashed_password,
-                user.full_name,
-                user.phone,
-                user.blood_group,
-            ),
-        )
+        cursor.execute("""
+            INSERT INTO users (email, hashed_password, full_name, phone, blood_group, role)
+            VALUES (?, ?, ?, ?, ?, ?)
+        """, (
+            user.email,
+            hashed_password,
+            user.full_name,
+            user.phone,
+            user.blood_group,
+            user.role,             # 👈 from request
+        ))
+
         conn.commit()
         user_id = cursor.lastrowid
 
@@ -150,8 +154,10 @@ async def signup(user: UserSignup):
             "full_name": new_user["full_name"],
             "phone": new_user["phone"],
             "blood_group": new_user["blood_group"],
-            "created_at": str(new_user["created_at"]),
+            "created_at": new_user["created_at"],
+            "role": new_user["role"],
         }
+
     except Exception as e:
         conn.close()
         raise HTTPException(status_code=500, detail=str(e))
@@ -171,12 +177,24 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()):
     return {"access_token": access_token, "token_type": "bearer"}
 
 @router.get("/me", response_model=UserResponse)
-async def get_current_user_info(current_user=Depends(get_current_user)):
+async def get_current_user_info(current_user = Depends(get_current_user)):
     return {
         "id": current_user["id"],
         "email": current_user["email"],
         "full_name": current_user["full_name"],
         "phone": current_user["phone"],
         "blood_group": current_user["blood_group"],
-        "created_at": str(current_user["created_at"]),
+        "created_at": current_user["created_at"],
+        "role": current_user["role"],
     }
+
+async def require_hospital(current_user = Depends(get_current_user)):
+    role = current_user["role"]
+    if role != "hospital":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only hospital accounts can access this resource."
+        )
+    return current_user
+
+
