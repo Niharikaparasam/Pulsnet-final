@@ -1,0 +1,49 @@
+/* 🌟 Light Clean Theme Pages */
+
+.light-page {
+  min-height: 100vh;
+  background: linear-gradient(to bottom, #fff9d9, #ffffff);
+  padding: 50px 0;
+  text-align: center;
+  color: #333;
+  font-family: "Poppins", sans-serif;
+}
+
+/* page containers inside */
+.light-container {
+  width: 70%;
+  margin: auto;
+  background: #ffffff;
+  padding: 30px 40px;
+  border-radius: 18px;
+  box-shadow: 0 8px 26px rgba(0,0,0,0.08);
+  text-align: left;
+}
+
+/* headings */
+.light-page h1 {
+  font-size: 36px;
+  font-weight: 700;
+  color: #222;
+}
+
+/* section description */
+.light-page p {
+  font-size: 18px;
+  opacity: 0.8;
+  margin-bottom: 15px;
+}
+
+button {
+  background: #ffcb3c;
+  border: none;
+  padding: 10px 26px;
+  font-size: 16px;
+  border-radius: 10px;
+  transition: 0.2s;
+}
+
+button:hover {
+  background: #ffb300;
+  cursor: pointer;
+}

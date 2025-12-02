@@ -1,0 +1,185 @@
+/* ---------- Dashboard (light + warm yellow theme) ---------- */
+
+:root{
+  --bg-top: #fffdf6;       /* very light warm */
+  --bg-bottom: #fff8e6;    /* soft warm yellow */
+  --accent-yellow: #ffd86b;/* badge / accent */
+  --accent-deep: #ffb703;  /* stronger yellow */
+  --accent-teal: #06d6a0;
+  --card-shadow: 0 8px 30px rgba(16,24,40,0.06);
+  --card-hover-shadow: 0 18px 40px rgba(16,24,40,0.08);
+  --muted: #6b6b6b;
+  --text: #0f172a;
+  --radius-lg: 14px;
+}
+
+/* ---------- Page background ---------- */
+.dashboard-container {
+  width: 100%;
+  min-height: 100vh;
+  padding: 30px;
+  background: linear-gradient(180deg, var(--bg-top) 0%, var(--bg-bottom) 100%);
+  color: var(--text);
+  text-align: center;
+  font-family: "Poppins", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+  box-sizing: border-box;
+}
+
+/* ---------- Header ---------- */
+.dash-header {
+  max-width: 1100px;
+  margin: 0 auto 18px;
+}
+
+.dash-header h1 {
+  font-size: 36px;
+  font-weight: 700;
+  margin: 0 0 6px;
+  color: var(--text);
+}
+
+.dash-header p {
+  font-size: 15px;
+  color: var(--muted);
+  margin: 0 0 24px;
+}
+
+/* ---------- User Role Badge ---------- */
+.user-info {
+  margin-bottom: 18px;
+  font-size: 15px;
+  color: var(--muted);
+}
+
+.role-badge {
+  margin-left: 8px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+  display: inline-block;
+  vertical-align: middle;
+  box-shadow: 0 2px 8px rgba(16,24,40,0.04);
+}
+
+.role-badge.user {
+  background: linear-gradient(90deg, var(--accent-yellow), var(--accent-deep));
+  color: #111;
+}
+
+.role-badge.hospital {
+  background: linear-gradient(90deg, #9fffd3, #06d6a0);
+  color: #022;
+}
+
+/* ---------- Card grid ---------- */
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 22px;
+  justify-items: center;
+  align-items: stretch;
+  max-width: 1200px;
+  margin: 10px auto 40px;
+  padding: 0 12px;
+  box-sizing: border-box;
+}
+
+/* ---------- Card design (light) ---------- */
+.dash-card {
+  width: 100%;
+  max-width: 360px;
+  background: #ffffff;
+  color: var(--text);
+  border-radius: var(--radius-lg);
+  padding: 22px;
+  text-align: left;
+  transition: transform 220ms ease, box-shadow 220ms ease;
+  cursor: pointer;
+  box-shadow: var(--card-shadow);
+  border: 1px solid rgba(15,23,42,0.03);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: 170px;
+}
+
+.dash-card:hover{
+  transform: translateY(-6px) scale(1.01);
+  box-shadow: var(--card-hover-shadow);
+}
+
+/* card header & body */
+.dash-card h2 {
+  font-size: 20px;
+  margin: 0 0 8px;
+  color: var(--text);
+  letter-spacing: -0.2px;
+}
+
+.dash-card p {
+  font-size: 14px;
+  color: var(--muted);
+  margin: 0 0 14px;
+  line-height: 1.45;
+}
+
+/* CTA button */
+.dash-card .card-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  background: linear-gradient(90deg, #111827, #000);
+  color: #fff;
+  padding: 10px 14px;
+  border-radius: 10px;
+  text-decoration: none;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 6px 18px rgba(2,6,23,0.06);
+  transition: transform 160ms ease, opacity 160ms ease;
+}
+
+.dash-card .card-cta:hover { transform: translateY(-3px); }
+
+/* Top accent ribbon for cards (thin) */
+.dash-card::before{
+  content: "";
+  display: block;
+  height: 6px;
+  width: calc(100% + 44px); /* slightly overflow to look like ribbon */
+  margin-left: -22px;
+  margin-bottom: 14px;
+  border-top-left-radius: var(--radius-lg);
+  border-top-right-radius: var(--radius-lg);
+  background: linear-gradient(90deg, rgba(255,216,107,1), rgba(255,183,3,1));
+}
+
+/* use classes to slightly change accent color for types */
+.dash-card.match::before { background: linear-gradient(90deg,#ffd86b,#ffb703); }
+.dash-card.donate::before { background: linear-gradient(90deg,#ffd1e1,#ff7aa2); }
+.dash-card.upload::before { background: linear-gradient(90deg,#b5ffd6,#06d6a0); }
+
+/* ---------- Small helpers ---------- */
+.small-muted { font-size: 13px; color: var(--muted); margin-top: 8px; }
+.center { text-align: center; }
+
+/* ---------- Responsive tweaks ---------- */
+@media (max-width: 768px){
+  .dash-header h1 { font-size: 28px; }
+  .card-grid { gap: 14px; padding: 0 8px; }
+  .dash-card { padding: 18px; min-height: 150px; }
+}
+
+/* ---------- Accessibility / focus states ---------- */
+.dash-card:focus-within, .dash-card:focus { outline: 3px solid rgba(255,216,107,0.18); }
+
+/* ---------- Tiny visual polish ---------- */
+.badge-note {
+  display: inline-block;
+  margin-left: 10px;
+  font-size: 12px;
+  color: #6b6b6b;
+  vertical-align: middle;
+}
